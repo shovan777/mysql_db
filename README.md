@@ -20,3 +20,6 @@ $ git push origin master
 
 ```
 
+At the end of day learned techniques to write the TIL
+
+
