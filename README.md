@@ -17,6 +17,8 @@ $ git add -A
 $ git commit -m "first commit"
 $ git remote set-url origin <url- name>
 $ git push origin master
+$ git branch -D HEAD
+$ git checkout -b hotfix
 
 ```
 
