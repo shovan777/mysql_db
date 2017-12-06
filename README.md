@@ -222,8 +222,9 @@ select * from teams_tbl where team_captain like 's%';
 
 ### RegExp
 
-Pattern	 | what the pattern matches
-- - - - - - - - - -  | - - - - - - - - - 
+
+Pattern | what the pattern matches
+---- | ---- 
 ^|beginning of string
 $|end of string
 .|any single character
