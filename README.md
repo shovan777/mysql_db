@@ -345,10 +345,10 @@ select * from teams_tbl into outfile '/var/log/mysql/teams.txt';
 -  this method does not work and states some error about ```file- priv```
 
 ### enable reading table from file into database
-```bash
 mysql - - local- infile=1 - u root - p
 ```
 ### exporting as a CSV
+```bash
 ```mysql
 select * from teams_tbl into outfile "/var/log/mysql/teams_data.txt" fields terminated by ',' enclosed by '"' lines terminated by '\r\n';
 ```
@@ -379,3 +379,339 @@ mysqlimport - u root - p - - local tmp_db ~/Desktop/teams_tbl.txt
 ### import data for csv file
 ```bash
 mysqlimport - u root - p - - local - - fields- terminated- by="," - - lines- terminated- by="\r\n" database_name dump.txt
+```
+----
+## Dec 6, 2017
+- space, casing, tabs do not matter in mysql
+### selecting distinct elements
+```mysql
+select distinct state from customers
+```
+### limit your selection
+```mysql
+ select id,name from customers limit 5 
+ select id,name from customers limit 5, 10
+ ```
+ - ```5, 10``` 5 is the starting point while 10 is the number of rows
+ - fully qualified names like ```customers.address```
+  
+ ### Ordering by multiple fields
+ ```mysql
+ select state, city, name from customers order by state, name
+ ```
+ - first it sorts by first criteria ```state``` then if multiple rows have same ```state```, it sorts by ```name```
+ 
+ ### wildcards with like
+ ```mysql
+ select name from items where name like '%new%'
+ select name from items where name like 'h%d'
+ ```
+- mysql is not case sensitive
+
+### wildcard ```_``` for only single character
+```mysql
+select name from items where name like '_ boxes of frogs'
+```
+
+### using regular expression
+```mysql
+select name from items where name regexp 'gold|car'
+```
+- here the ```gold|car``` is a regular expression
+ 
+----
+ 
+## Dec 8, 2017
+ 
+### concatenate columns into a new column
+```mysql
+select concat(city, ', ', state) as new_address from customers 
+```
+- ```as new_address``` gives the newly constructed column a name
+- using mathematical ops
+```mysql
+select name, cost, cost-1 as sale_price from items
+```
+### functions in mysql
+```mysql
+select name, upper(name) from customers
+```
+- the ```upper()``` causes ```name``` to be upper cased
+
+```mysql
+select cost, sqrt(cost) from items
+``` 
+- aggregate functions take all columns and give you single answer
+```mysql
+select avg(cost) from items
+select sum(bids) from items
+select count(name) from items where id=6
+```
+- using multiple functions
+```mysql
+select count(*) as item_count,
+max(cost) as max,
+avg(cost) as avg
+from items where seller_id=12
+```
+### using ```group by```
+```mysql
+select seller_id, count(*) as item_count from items group by seller_id having count(*) >= 3
+```
+- ```having``` is like ```where``` for ```group by```
+
+### subquery 
+- query inside a query
+```mysql 
+select name, cost from items where cost>(
+select avg(cost) from items
+)order by cost desc
+```
+- mysql runs its queries inside out so the query inside parenthesis is run first
+
+### ```join``` tables
+```mysql
+select customers.id, customers.name, items.name, items.cost
+from customers, items
+where custormers.id = seller_id
+order by customers.id
+```
+### outer ```join```
+```mysql
+select customers.name, items.name 
+from customers left outer join items
+on customers.id=seller_id
+```
+
+- ```left outer join``` forces the tables on its right to be shown even if it does not meet the condition
+
+### union
+```mysql
+select name, cost, bids from items where bids>10
+union all
+select name,cost, bids from items where cost>10
+```
+- returns a single result table combining both queries
+- the columns ```name, cost, bids``` must be same for both queries
+- ```all``` does not let sql to delete duplicate entries
+
+### adding features to your tables
+```mysql
+alter table items add fulltext(name)
+```
+- fulltext searching
+```mysql
+select name, cost from items where match(name) against('+baby -coat' in boolean mode)
+```
+- fulltext is much faster than ```regexp```
+
+### renaming a table
+```mysql
+rename table customers to users
+```
+### views
+```mysql
+create view mostbids as
+select id, name, bids from items order by bids desc limit 10
+```
+- make it for queries which you need to compile multiple times
+- view gets updated automatically if the table is modified
+- you can also run queries on ```views``` like in ```table```
+- ```views``` do not store data themselves
+
+  
+### Mongodb intro
+- it is document-based database
+
+### creating database
+```
+use mycustomers
+```
+- it also switches to newly created database
+
+### creating user
+```
+db.createUser({
+	user:"brad",
+	pwd:"1234",
+	roles:["readWrite", "dbAdmin"]
+});
+```
+### creating collections
+```
+db.createCollection("customers");
+show collections
+```
+### inserting data into collections
+```
+db.customers.insert({first_name: "John", last_name: "Doe"});
+db.customers.find();
+```
+- no need to set id primary_key , etc in mongodb
+
+### adding fields
+```
+db.customers.insert({first_name: "Johnica",  last_name: "Doe", gender: "female"});
+db.customers.find().pretty();
+```
+- can add fields on the fly
+
+### updating all fields
+```
+db.customers.update({first_name: "John"}, {first_name: "John", last_name:"Doe", gender:"male"});
+```
+### updating a particular field
+```
+db.customers.update({first_name: "John"}, {$set:{gender: "male"}});
+```
+- the above command only updates the first document with matching condition
+- the following code updates all documents with the matching condition
+```
+db.customers.update({first_name: "John"}, {$set:{gender: "male"}}, {multi: true});
+```
+### incrementing an field
+```
+db.customers.update({first_name: "Steven"}, {$inc: {age: 5}});
+```
+### removing a field
+```
+db.customers.update({first_name: "Steven"}, {$unset:{age:1}});
+```
+### adding a row if it is not found
+```
+db.customers.update({first_name: "Mary"}, {first_name: "Mary", last_name: "Samson"}, {upsert: true});
+```
+### renaming
+```
+db.customers.update({first_name: "Steven"}, {$rename: "gender": "sex"});
+```
+### removing documents
+```
+db.customers.remove({first_name:"Steven"});
+```
+- to only remove the first row it finds
+```
+db.customers.remove({first_name:"Steven"}, {justOne: true});
+```
+
+### find with conditions
+```
+db.customers.find({$or[{first_name:"sharon"}, {first_name: "troy"}}]});
+db.customers.find({age: {$lt:40}}).pretty();
+```
+- ```lt``` here represents less than operator
+
+### sorting
+```
+db.customers.find().sort({last_name:1})
+```
+- put ```-1``` for descending order
+
+### count and limit
+```
+db.customers.find({gender: "male"}).count();
+db.customers.find({gender: "male"}).limit(4);
+```
+### iterating
+```
+db.customers.find().forEach(function(doc){print("customer name: "+doc.first_name)});
+```
+----------
+
+## Dec 11, 2017
+## Mongo contd.....
+
+### Mongodb structure
+```
+Database -> Collections -> Documents
+```
+### checking your current database
+```
+use testdb
+db
+show dbs
+```
+- ```show``` will not display ```testdb``` since there is no
+
+### deleting a database
+```
+db.dropDatabase()
+```
+
+### deleting a collection
+```
+db.collectionName.drop()
+```
+### inserting multiple documents
+```
+db.collectionName.insert([
+{
+name: "beta"
+},
+{
+name: "beti",
+ld : 5
+}]
+```
+- ```[ ]``` denotes an array
+
+### findone
+```
+db.employees.findOne()
+```
+- ```$lte``` means less than or equal
+
+### find with multiple conditions
+```
+db.employees.find({
+	"Skill": "mongo",
+	"salary": 40000
+}).pretty()
+```
+- ```,``` acts as ```and``` in above find command
+
+- doing ```or``` op
+```
+db.employees.find({
+	"skill": "mongo",$or: [{"salary": "20000"}, {"salary": "10000"}]
+}).pretty()
+```
+- displaying only one field with ```find```
+```
+db.employees.find(
+{},
+{'firstname': 1}
+).pretty()
+```
+- ```1``` here means set and ```0``` means unset
+- the ```_id``` field is set by default, so is displayed by default 
+- in order to not display the ```_id``` , you need to unset it
+
+### limit, skip, sort
+```
+db.employees.find(
+{},
+{'firstname': 1}
+).pretty().skip(3).limit(5).sort({"firstname": 1})
+```
+- limit to only five results after skipping first three results
+- ```1``` means sort in ascending order
+
+### Indexing
+```
+db.employees.ensureIndex({"email": 1})
+db.employees.getIndexes()
+db.employees.dropIndex({"Email": 1})
+```
+### restore and backup collection and documents
+```
+mongodump --collections collection_name
+mongorestore --collections collection_name path_name
+```
+
+
+
+
+
+
+ 
